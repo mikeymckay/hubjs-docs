@@ -68,7 +68,7 @@ the hub-VERSION.js file in a JavaScriptCore context (which you can get by
 creating a WebView).
 
 The :ref:`integration API <topics-integration>` contains more information on 
-using hub.js with a native application environments.
+using hub.js with native application environments.
 
 .. _send Erich Ocean a message via GitHub: http://github.com/inbox/new/erichocean
 .. _Cocoa touch on the iPhone or iPad: http://developer.apple.com/iphone/
