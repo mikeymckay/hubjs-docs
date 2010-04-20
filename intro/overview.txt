@@ -177,7 +177,7 @@ server-based Web app stacks like `Django`_ or `Rails`_ by loading hub.js and
 your data model on the server.
 
 .. _Django: http://djangoproject.com
-.. _Rails: http://en.wikipedia.org/wiki/Ruby_on_Rails
+.. _Rails: http://rubyonrails.org/
 
 This is just the surface
 ========================
