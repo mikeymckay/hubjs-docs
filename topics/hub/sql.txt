@@ -1,4 +1,4 @@
-.. _topics-db-sql:
+.. _topics-hub-sql:
 
 Performing raw SQL queries
 ==========================

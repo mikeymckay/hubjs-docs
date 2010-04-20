@@ -1,4 +1,4 @@
-.. _topics-db-index:
+.. _topics-hub-index:
 
 Models and databases
 ====================

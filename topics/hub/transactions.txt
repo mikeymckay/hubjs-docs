@@ -1,4 +1,4 @@
-.. _topics-db-transactions:
+.. _topics-hub-transactions:
 
 ==============================
 Managing database transactions

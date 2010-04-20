@@ -9,7 +9,7 @@ Introductions to all the key parts of Django you'll need to know:
    :maxdepth: 1
 
    install
-   db/index
+   hub/index
    http/index
    forms/index
    forms/modelforms

@@ -1,4 +1,4 @@
-.. _topics-db-queries:
+.. _topics-hub-queries:
 
 ==============
 Making queries
