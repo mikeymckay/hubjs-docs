@@ -53,7 +53,7 @@ Next, create a simple HTML page that loads hub.js and your data model:
 .. code-block:: html
 
     <html>
-       <head>
+      <head>
         <title>Use the console, Luke.</title>
         <script type="text/javascript" src="hub.js"></script>
         <script type="text/javascript" src="newsroom.hub.js"></script>
@@ -149,7 +149,7 @@ It's as easy as loading the admin JavaScript and CSS in a web page:
 .. code-block:: html
 
     <html>
-       <head>
+      <head>
         <title>Newsroom Admin</title>
         <style type="text/css" media="screen" src="hub-admin.css"></style>
         <script type="text/javascript" src="hub.js"></script>
