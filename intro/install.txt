@@ -63,7 +63,7 @@ Using hub.js outside the browser
 When you are using hub.js with a native application environment such as `Cocoa 
 touch on the iPhone or iPad`_, you would add the hub-VERSION.js file to your 
 app project in Xcode and copy it into the Resources folder in the built app. 
-You can then use methods provided in Cocoa touch to locate, load and execute 
+You can then use `methods provided in Cocoa`_ to locate, load and execute 
 the hub-VERSION.js file in a JavaScriptCore context (which you can get by 
 creating a WebView).
 
@@ -72,7 +72,7 @@ using hub.js with native application environments.
 
 .. _send Erich Ocean a message via GitHub: http://github.com/inbox/new/erichocean
 .. _Cocoa touch on the iPhone or iPad: http://developer.apple.com/iphone/
-
+.. _methods provided in Cocoa: http://developer.apple.com/mac/library/documentation/CoreFoundation/Conceptual/CFBundles/AccessingaBundlesContents/AccessingaBundlesContents.html
 That's it!
 ----------
 
