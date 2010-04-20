@@ -3,83 +3,63 @@
 Quick install guide
 ===================
 
-Before you can use Django, you'll need to get it installed. We have a
-:ref:`complete installation guide <topics-install>` that covers all the
-possibilities; this guide will guide you to a simple, minimal installation
-that'll work while you walk through the introduction.
+Requirements
+------------
+hub.js should run on any `ECMAScript 3`_-compliant JavaScript engine. If you 
+have found a compliant JavaScript engine that will not run hub.js, `please 
+submit a bug report`_. Portability issues are high priority and will be 
+addressed promptly.
 
-Install Python
---------------
+hub.js is a standalone library, not a "framework". It contains no tooling, no 
+"buildtools", no dependencies of any kind. It does not have its own package 
+manager or server. Everything is contained in a single file.
 
-Being a Python Web framework, Django requires Python. It works with any Python
-version from 2.3 to 2.6 (due to backwards
-incompatibilities in Python 3.0, Django does not currently work with
-Python 3.0; see :ref:`the Django FAQ <faq-install>` for more
-information on supported Python versions and the 3.0 transition), but we recommend installing Python 2.5 or later. If you do so, you won't need to set up a database just yet: Python 2.5 or later includes a lightweight database called SQLite_.
+We firmly believe that your app's model layer should be as portable as possible 
+to new platforms. The design of hub.js makes this possible: hub.js makes no 
+assumptions about the environment that it is run in. This makes hub.js (and the 
+data models you build on top of it) extremely portable.
 
-.. _sqlite: http://sqlite.org/
+hub.js is released under a liberal `MIT license`_.
 
-Get Python at http://www.python.org. If you're running Linux or Mac OS X, you
-probably already have it installed.
+.. _please submit a bug report: http://github.com/hubjs/hubjs/issues
+.. _ECMAScript 3: http://en.wikipedia.org/wiki/ECMAScript
+.. _MIT license: http://hubjs.org/license.html
 
-.. admonition:: Django on Jython
+Getting the code
+----------------
 
-    If you use Jython_ (a Python implementation for the Java platform), you'll
-    need to follow a few additional steps. See :ref:`howto-jython` for details.
+Before you can use hub.js, you'll need to get a copy for yourself. There are 
+`two copies of hub.js available`_. The first, called 'hub-VERSION.js' is 
+for development only and includes copius amounts of inline documentation and 
+readable source code. ('VERSION' is a placeholder for the current release of 
+hub.js. For example, 'hub-0.9.js'.)
 
-.. _jython: http://www.jython.org/
+The second is called 'hub-VERSION.min.js' and is meant for deployment. All of 
+the comments have been removed and the source code packed and minified. This 
+makes the source code virtually unreadable, but reduces the size dramatically.
 
-You can verify that Python's installed by typing ``python`` from your shell; you should see something like::
+.. _two copies of hub.js available: http://hubjs.org/download/
 
-    Python 2.5.1 (r251:54863, Jan 17 2008, 19:35:17) 
-    [GCC 4.0.1 (Apple Inc. build 5465)] on darwin
-    Type "help", "copyright", "credits" or "license" for more information.
-    >>>
+hub.js is self-contained, so you can place it anywhere on your system. A 
+typical location is next to the HTML file you intend to load hub.js into. You 
+can then refrerence hub.js like this:
+
+.. code-block:: html
+
+    <script type="text/javascript" src="hub-VERSION.js"></script>
+
+.. admonition:: Don't link!
+
+    Please do not link to http://hubjs.org/download/hub-VERSION.js! Always get 
+    your own copy.
     
-Set up a database
------------------
+    Long-term, we hope to have hub.js available via Google's CDN. If you know 
+    someone at Google who can help get that done, please `send Erich Ocean a 
+    message via GitHub`_.
 
-If you installed Python 2.5 or later, you can skip this step for now.
+.. _send Erich Ocean a message via GitHub: http://github.com/inbox/new/erichocean
 
-If not, or if you'd like to work with a "large" database engine like PostgreSQL,
-MySQL, or Oracle, consult the :ref:`database installation information
-<database-installation>`.
-
-Remove any old versions of Django
----------------------------------
-
-If you are upgrading your installation of Django from a previous version, you
-will need to :ref:`uninstall the old Django version before installing the new
-version <removing-old-versions-of-django>`.
-
-Install Django
---------------
-
-You've got three easy options to install Django:
-
-    * Install a version of Django :ref:`provided by your operating system
-      distribution <misc-distributions>`. This is the quickest option for those
-      who have operating systems that distribute Django.
-
-    * :ref:`Install an official release <installing-official-release>`. This
-      is the best approach for users who want a stable version number and aren't
-      concerned about running a slightly older version of Django.
-      
-    * :ref:`Install the latest development version
-      <installing-development-version>`. This is best for users who want the
-      latest-and-greatest features and aren't afraid of running brand-new code.
-      
-.. warning::
-
-    If do either of the first two steps, keep an eye out for parts of the
-    documentation marked **new in development version**. That phrase flags
-    features that are only available in development versions of Django; if you
-    try to use them with an official release they won't work.
-    
 That's it!
 ----------
 
-That's it -- you can now :ref:`move onto the tutorial <intro-tutorial01>`.
-
-
-
+You can now :ref:`move onto the tutorial <intro-tutorial01>`.
