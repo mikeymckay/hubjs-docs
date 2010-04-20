@@ -57,7 +57,21 @@ can then refrerence hub.js like this:
     someone at Google who can help get that done, please `send Erich Ocean a 
     message via GitHub`_.
 
+Using hub.js outside the browser
+--------------------------------
+
+When you are using hub.js with a native application environment such as `Cocoa 
+touch on the iPhone or iPad`_, you would add the hub-VERSION.js file to your 
+app project in Xcode and copy it into the Resources folder in the built app. 
+You can then use methods provided in Cocoa touch to locate, load and execute 
+the hub-VERSION.js file in a JavaScriptCore context (which you can get by 
+creating a WebView).
+
+The :ref:`integration API <topics-integration>` contains more information on 
+using hub.js with a native application environments.
+
 .. _send Erich Ocean a message via GitHub: http://github.com/inbox/new/erichocean
+.. _Cocoa touch on the iPhone or iPad: http://developer.apple.com/iphone/
 
 That's it!
 ----------
