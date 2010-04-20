@@ -30,7 +30,7 @@ Getting the code
 
 Before you can use hub.js, you'll need to get a copy for yourself. There are 
 `two copies of hub.js available`_. The first, called 'hub-VERSION.js' is 
-for development only and includes copius amounts of inline documentation and 
+for development only and includes copious amounts of inline documentation and 
 readable source code. ('VERSION' is a placeholder for the current release of 
 hub.js. For example, 'hub-0.9.js'.)
 
