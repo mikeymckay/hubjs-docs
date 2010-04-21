@@ -570,7 +570,7 @@ the hub itself::
 Now that we've got our ``hub.Hub`` subclass defined, we can provide API to 
 create new hubs::
 
-    TalkList.new = function() {
+    TaskList.new = function() {
         return TaskList.Hub.create();
     };
 
@@ -584,6 +584,52 @@ arrays, which is how we'll provide the list of tasks to our apps.
 
 Record Arrays
 -------------
+
+Now that we've got our task lists (one hub per list) and a way to add tasks, we 
+need a simple way to make these tasks available to apps. For this, we'll be 
+using the ``hub.RecordArray`` and ``hub.Query`` classes::
+
+    TaskList.Hub = hub.Hub.extend({
+        uti: 'com.example.tasklist',
+        
+        allTasks: function() {
+            return this.find(hub.Query.create(Task, {
+                orderBy: 'description ASC'
+            }));
+        }.property().cacheable()
+    });
+
+We define our record arrays *per hub* because want to provide a unique list of 
+tasks for each hub. Later, we'll look at ways of efficiently combining task 
+lists -- even though they originate in different hubs.
+
+We also define the queries dynamically. Each ``hub.Query`` instance presents a 
+small load during updates (and also consumes memory). It's not a lot, but since 
+hub.js makes it easy to define them on-demand, we'll conserve memory and do 
+just that.
+
+To access the tasks array, we'll use key-value coding in our app::
+
+    >>> var tasklist = TaskList.new();
+    >>> var tasks = tasklist.get('allTasks');
+    >>> tasks.get('length');
+    0
+    >>> var rec = tasklist.insert(Task, {
+    ...     description: "Finish the hub.js tutorial."
+    ... });
+    >>> tasks.get('length');
+    1
+    >>> tasklist.destroy(rec);
+    >>> tasks.get('length');
+    0
+
+There's a lot more to say about ``hub.RecordArray`` and ``hub.Query``, but for 
+now we'll move on to the rest of the app.
+
+
+
+Django Starts Here
+==================
 
 If this is your first time using Django, you'll have to take care of some
 initial setup. Namely, you'll need to auto-generate some code that establishes a
