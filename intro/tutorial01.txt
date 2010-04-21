@@ -521,9 +521,22 @@ Relationships
 -------------
 
 We'd like to have more than one task list in our app, so our first instinct 
-would be to create a ``TaskList.TalkList`` class with a 
-``.toMany('TalkList.Task')`` relationship. As it turns out, this design isn't 
-very flexible.
+would be to do something like this::
+
+    TaskList.TaskList = hub.Record.extend({
+        tasks: hub.toMany('TaskList.Task', {
+            inverse: 'taskList'
+        })
+    });
+    
+    TalkList.Task = hub.Record.extend({
+        // (other attributes ommitted in this listing)
+        taskList: hub.toOne('TaskList.TaskList', {
+            inverse: 'tasks', isMaster: true
+        })
+    });
+
+As it turns out, this design isn't very flexible and won't meet our needs.
 
 To see why, we need to think a little bit about *sharing*. One goal of our data 
 model is to be able to create and update shared task lists. Although in 
