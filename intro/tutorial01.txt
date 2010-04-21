@@ -1,35 +1,385 @@
 .. _intro-tutorial01:
 
-=====================================
-Writing your first Django app, part 1
-=====================================
+============================================
+Writing your first hub.js data model, part 1
+============================================
 
 Let's learn by example.
 
-Throughout this tutorial, we'll walk you through the creation of a basic
-poll application.
+Throughout this tutorial, we'll walk you through the creation of a data model 
+for a todo list application with shared todo lists and multiple, simultaneous 
+users that syncs updates to multiple devices, on multiple platforms, in 
+real-time. We'll also demonstrate how easy it is to integrate our new hub.js 
+data model into an existing app or server.
 
-It'll consist of two parts:
+Finally, we'll be demonstrating the portability of our new hub.js data model by 
+running the code on multiple platforms. For simplicity, you should follow along 
+with your primary platform and skim the documentation for the others to get a 
+sense of the effort involved.
 
-    * A public site that lets people view polls and vote in them.
-    * An admin site that lets you add, change and delete polls.
+Along the way, we'll be describing the internals of hub.js and how the 
+innovative Hub data structure at the heart of hub.js makes efficient, 
+reliable, universal sync and storage for arbitrary data models possible.
 
-We'll assume you have :ref:`Django installed <intro-install>` already. You can
-tell Django is installed by running the Python interactive interpreter and
-typing ``import django``. If that command runs successfully, with no errors,
-Django is installed.
+This tutorial consists of five parts:
+
+    * A hub.js data model definition plus custom User and Device subclasses. 
+      This part is platform-independent and portable. (The remaining steps are 
+      required to use hub.js and the data model on a specific platform.)
+    * An implementation of the :ref:`device storage API <topics-device>` on 
+      mulitple platforms.
+    * An implementation of the :ref:`sync API <topics-sync>` on multiple 
+      platforms with `nodered`_ serving as our sync server.
+    * An implementation of the :ref:`remote storage API <topics-sync>` on 
+      multiple platforms with the `hub.js reference AppEngine app`_.
+    * An implementation of the :ref:`integration API <topics-sync>` on multiple 
+      platforms. Though we won't actually have a legacy API to integrate with, 
+      the foundation will be there. If you have an existing todo list app, you 
+      are encouraged to try using the integration API with that app.
+
+.. _nodered: http://github.com/fictorial/nodered
+.. _hub.js reference AppEngine app: http://github.com/hubjs/hubjs-appengine
+
+We'll assume you have a :ref:`copy of hub.js <intro-install>` already. You 
+should use the development copy of hub.js for this tutorial.
 
 .. admonition:: Where to get help:
 
     If you're having trouble going through this tutorial, please post a message
-    to `django-users`__ or drop by `#django on irc.freenode.net`__ to chat
-    with other Django users who might be able to help.
+    to the `hubjs group`__ or drop by `#hub.js on irc.freenode.net`__ to chat
+    with other hub.js users who might be able to help.
 
-__ http://groups.google.com/group/django-users
-__ irc://irc.freenode.net/django
+__ http://groups.google.com/group/hubjs/
+__ irc://irc.freenode.net/hub.js
 
-Creating a project
-==================
+Model-View-Controller
+=====================
+
+hub.js is designed around the model-view-controller (MVC) paradigm (with hub.js 
+implementing the model layer). **In order to understand how to write a data model 
+with hub.js, you need to understand how the data model will be used by the 
+controller and view layers.**
+
+hub.js implements a particular variant of MVC, with the layers arranged as a 
+vertical stack::
+
+    View Layer
+    Controller Layer
+    Model Layer
+        your data model
+        hub.js
+
+Modern model layers like hub.js are designed specifically for event-driven 
+apps.
+
+.. admonition:: Adopt MVC-driven development
+
+  MVC layers are a logical construct, not a technical one. You are free to 
+  violate the layering in your app at any time. If you do, however, the result 
+  is usually an update anomally: the view layer will not be consistent with the 
+  controller layer which will not be consistent with the model layer. These 
+  kinds of bugs are very difficult to find and fix manually. The best solution 
+  is to apply MVC layering consistently, preventing the bugs in the first place.
+  
+  hub.js is specifically designed to support strict MVC layering. By adopting 
+  the approach presented here, and thinking of your app in layers and the 
+  events as propogating in a predictable route through those layers (aka the 
+  "V" property), your app will be robust to model layer updates and new event 
+  types.
+
+Doing nothing is normal
+-----------------------
+
+In an event-driven app, the app is usually in a dormant state with no code 
+running. The app is "woken up" by the platform when an event occurs, usually by 
+invoking a callback inside the app. For example, on the browser, you register 
+callbacks for specific events using the DOM API. (On Mac OS X, Cocoa typically 
+registers for events with the operating system for you; you do not need to 
+register for events manually.)
+
+When an event callback is called by the platform, the event is handled in a 
+"run-to-completion" manner. Simply put, this means that no other events will be 
+handled while the callback is running. If another event occurs while the 
+current event is being handled, the platform will *queue* the event and invoke 
+the appropriate callback in your app at a later time.
+
+Each callback from the platform conceptually occurs at a specific level of the 
+MVC architecture. For a "mouse down" event, the callback is occurring in the 
+view layer. When an app supports a scripting language such as AppleScript, each 
+scripting call is considered to be a callback event and the event "occurs" in 
+the controller layer. Finally, storage- and network-related callback events are 
+usually considered to have occurred in the model layer.
+
+Propagating changes
+-------------------
+
+Event callbacks are important because they are the only way to produce a change 
+in the state of your app. Strict MVC layering is important because it specifies 
+*how* a change that is made is propagated throughout your app, based on the 
+MVC layer the change originated from and the MVC layers that change affects.
+
+In previous MVC architectures, change propagation was left undefined. Each app 
+developer would write custom "glue" code to propagate changes in their app. In 
+many cases, the bulk of an app was made up of glue code! Because this code was 
+ill-defined and typically written in an *ad hoc* fashion, the predictable 
+result was apps with frequent "update bugs" where the UI became inconsistent 
+with the controller and model layers (and vice versa).
+
+hub.js provides a solid foundation for addressing change propagation in your 
+app by implementing comprehensive key-value coding and key-value observing 
+support.
+
+Key-value coding
+----------------
+
+Key-value coding (KVC) is a critical enabling technology in the modern MVC 
+stack, and hub.js includes a robust, efficient KVC implementation written 
+entirely in JavaScript. By adopting hub.js for your model layer, your apps will 
+have access to KVC on every platform.
+
+KVC simply means that you work with your objects as if they were dictionaries. 
+A "key" is used to access properties, and the "value" is returned. In hub.js, 
+key-value coding is done using the ``.get()`` and ``.set()`` methods that are 
+part of most objects in hub.js.
+
+Here's an example of using KVC to get the value of a property::
+
+    >>> var obj = hub.Object.create({ firstName: "Erich", lastName: "Ocean" });
+    >>> obj.get('firstName');
+    "Erich"
+    >>> obj.get('lastName');
+    "Ocean"
+
+You can even implement computed properties, by associating a property name with
+a function and calling ``.property()``::
+
+    >>> var obj = hub.Object.create({
+    ...     firstName: "Erich", lastName: "Ocean",
+    ...     fullName: function(key, val) {
+    ...         return this.getEach('firstName', 'lastName').join(" ");
+    ...     }.property('firstName', 'lastName').cacheable()
+    ... });
+    >>> obj.get('fullName');
+    "Erich Ocean"
+
+If you don't call ``.property()``, the function object itself will be returned::
+
+    >>> var obj = hub.Object.create({
+    ...     firstName: "Erich", lastName: "Ocean",
+    ...     fullName: function(key, val) {
+    ...         return this.getEach('firstName', 'lastName').join(" ");
+    ...     }
+    ... });
+    >>> obj.get('fullName');
+    Function
+
+Here's an example of using KVC to set the value of a property::
+
+    >>> var obj = hub.Object.create({ isClosed: false });
+    >>> obj.get('isClosed');
+    false
+    >>> obj.set('isClosed', true);
+    >>> obj.get('isClosed');
+    true
+
+As you can see, key-valued coding is a simple, easy-to-use API for property 
+access. You will always use KVC to access the public properties of your objects 
+when you work with hub.js.
+
+Key-value observing
+-------------------
+
+When you update an object using key-value coding, you can take advantage of 
+hub.js' support for key-value observing (KVO).
+
+KVO means that changes made via KVC can be observed, without having to modify 
+the object or property you're tryng to observe. To observe an arbitrary 
+property on an object for changes, you'll use ``.observes()``::
+
+    >>> var obj = hub.Object.create({
+    ...     isClosed: false,
+    ...     isClosedDidChange: function(target, key, revision) {
+    ...         console.log("isClosed did change to " + this.get('isClosed'));
+    ...     }.observes('isClosed')
+    ... });
+    >>> obj.set('isClosed', true);
+    isClosed did change to true
+
+It is not necessary to name the function doing the observing anything in 
+particular. Instead of ``isClosedDidChange()``, we could have named it 
+``foo()`` or ``bar()``.
+
+You can pass in multiple keys into ``.observes()`` and use the ``key`` argument 
+to determine which key changed::
+
+    >>> var obj = hub.Object.create({
+    ...     isClosed: false,
+    ...     hasDonuts: true,
+    ...     uberDidChange: function(target, key, revision) {
+    ...         console.log(key + " did change to " + this.get(key));
+    ...     }.observes('isClosed', 'hasDonuts')
+    ... });
+    >>> obj.set('isClosed', true);
+    isClosed did change to true
+    >>> obj.set('hasDonuts', false);
+    hasDonuts did change to false
+
+.. admonition:: hub.Observable
+
+    Only objects that include the ``hub.Observable`` mixin and call 
+    ``this.initObservable()`` participate in key-value coding and key-value 
+    observing. ``hub.Object`` does this for you automatically, but if you 
+    create objects that are not set up propertly, be aware that KVC and KVO 
+    will not function as intended with those objects.
+    
+    If this is jibberish to you, just be aware that you need to use 
+    ``hub.Object`` or the other classes in hub.js if you want to use KVC and 
+    KVO. All of the code in this tutorial supports KVC and KVO.
+
+Changes you make with KVC are propogated to observers *before* ``.set()`` 
+returns. This means that after a call to ``.set()``, you can be sure that all 
+observers have been notified of the change.
+
+There's a lot more to hub.js' KVC and KVO support, but this is as far as we're 
+going to go in this tutorial. You are encouraged to 
+:ref:`read the documentation <topics-mixins-observable>` in detail.
+
+.. admonition:: No run loop or bindings
+
+    hub.js does not include a run loop abstraction or bindings, although both 
+    are easy to add to hub.js. In fact, hub.js includes no event handling 
+    support whatsoever. Instead, there are callback APIs for sync, storage, and 
+    integration with legacy model layers.
+
+The "V" property
+================
+
+Understanding and respecting the "V" property is perhaps the most important 
+aspect of working with hub.js and using data models built with hub.js in actual 
+apps.
+
+The "V" property is a way to visualize the handling of a single event callback 
+and the state changes it causes as they propagate through the MVC stack. More 
+specifically, the "V" property specifies *what kinds of changes* to the state of 
+your app are legal to make at various point on the "V".
+
+By respecting these *change points*, apps you build on top of a hub.js data 
+model will always propogate changes correctly, regardless of how those changes 
+enter the app.
+
+Remember: in a hub.js model layer, many updates are the result of sync, which 
+conceptually enter the MVC stack at the bottom (this is also the bottom of the 
+"V"). The model layer does not contain any app-specific code, so it is 
+necessary to specify a protocol for notifying the app of updates to the model 
+layer that occur outside of the app's view. This is what the "V" property 
+specifies and why it is *crucial* that both the data model and apps that use it 
+respect the change notification protocol.
+
+Change points
+-------------
+
+An app that has the "V" property is an app that respects the change points on 
+the "V" -- it only makes specific kinds of updates to the app's data structures 
+when the update is allowed by the "V".
+
+There are five change points on the "V". They are:
+
+    * Event callbacks that enter the view layer, for example, mouse events.
+    * Event callbacks that enter the controller layer, for example, scripting 
+      language callbacks (AppleScript).
+    * Event callbacks that enter the model layer, for example, the various 
+      callback APIs in hub.js.
+    * Observer notifications in the controller layer, in response to changes in 
+      the model layer.
+    * Observer notifications in the view layer, in response to changes in the 
+      controller layer.
+
+In the most general case, a mouse event enters the view layer, triggers an 
+"action" in the controller layer, which calls an API in the model layer to 
+perform the action. These are the first three change points described above.
+
+When the action is performed, the controller layer is notifed by a property 
+observer and a property update in the controller layer is made as a result. 
+This is the fourth change point.
+
+Finally, a view observing the object in the controller layer that was just 
+updated is notified and as a result redraws itself to reflect the change. This 
+is the fifth change point.
+
+In the example just given, all five change points along the "V" were passed. In 
+general, it is not a requirement that every event pass through all five change 
+points. For example, a mouse down event that enter a mouse tracking loop would 
+only involve two change points, the first and the last, without involving the 
+control layer or the model layer at all.
+
+Preventing update anomalies
+---------------------------
+
+As far as importance goes, the last two change points are the most critical:
+**All updates to the state of the controller layer that are dependent on the 
+model layer should be in response to property observer callbacks in the model 
+layer.** A similar rule is in effect for the view layer, which should only 
+redrawn visual attributes derived from objects in the controller and model 
+layers when it is notified via property observer callbacks that they have 
+changed.
+
+What these change points disallow are updates in the controller and view layers 
+that are made based on *what they expect the model layer to look like*. For 
+example, consider a checkbox in the view layer that is displaying the content 
+of an object proxy in the controller layer this is proxing a record from the 
+model layer. In a nutshell, the checkbox is supposed to reflect the state of 
+the 'isClosed' property on a record from the model layer.
+
+Now, suppose the "V" property is not respected and the view updates the 
+checkbox only when it is clicked, that is, at the first change point (instead 
+of the last, which is what the "V" property would require).
+
+Here's the view logic: if the checkbox is "checked" when the mouse 
+clicks it, the view immediately redraws itself as "unchecked" and then forwards 
+the change on to the controller layer, which further forwards the change to the 
+model layer where it is recorded persistently by hub.js.
+
+If the app only ever handled mouse clicks, and assuming the controller layer or 
+model layer **never** rejected the update (a highly dubious assumption), this 
+code would appear to work correctly. Nevertheless, the code does **not** have 
+the "V" property because the change to its visual state is done at the wrong 
+change point (the first change point instead of the last).
+
+To demonstrate why the "V" property is important, let's update the data model 
+to reject all changes to the 'isClosed' property. It's now "read only". Now 
+when the user clicks the checkbox, it still changes, but the change is *wrong*, 
+because the update will be rejected! We now have an update anomaly, aka, a bug. 
+What's worse, *nothing in our app changed!* We just updated the data model to a 
+newer version and our app broke. Not good.
+
+At this juncture, we *could* modify the app to disable the checkbox, or check 
+with the controller or the model before updating, or any number of other hacks 
+-- all of which, it turns out, are irrelevant because the real bug is that the 
+view layer's job is to display data in the controller and model layer, whatever 
+that data is.
+
+If the view adopts the "V" property, not only will the previous bug be fixed, 
+but any futher changes to the controller and model layers will also be handled 
+correctly as well. Simply put, adopting the "V" property fixes the problem, not 
+the symptom.
+
+You should always respect the "V" property in your data model and in apps you 
+write with hub.js.
+
+KVO is the key to adopting the "V" property
+-------------------------------------------
+
+From the above description, it should be clear that key-value observing is what 
+makes the "V" property and change points possible. KVO, then, serves as the 
+foundational rule of data model design: always, *always*, **always** update the 
+objects in your data model in an observable way.
+
+If you use KVC to make changes, this will happen automatically and everything 
+wil Just Work. But occassionaly, for performance or otherwise, you may want to 
+make changes for a brief period of time with KVO disabled. This is perfectly 
+okay, so long as any KVO notifications are made *before* the next change point 
+is reached. That way, an app that is written to respect the "V" property will 
+be able to update its state correctly in response to the changes.
 
 If this is your first time using Django, you'll have to take care of some
 initial setup. Namely, you'll need to auto-generate some code that establishes a
