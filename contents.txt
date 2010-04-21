@@ -9,6 +9,7 @@ Django documentation contents
    
    intro/index
    topics/index
+   integration/index
    howto/index
    faq/index
    ref/index
