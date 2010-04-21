@@ -381,6 +381,210 @@ okay, so long as any KVO notifications are made *before* the next change point
 is reached. That way, an app that is written to respect the "V" property will 
 be able to update its state correctly in response to the changes.
 
+Data models
+===========
+
+With those preliminaries out of the way, we're now ready to tackle the data 
+model itself. In general, a data model consists of three parts:
+
+    * The schema. These are the subclasses of hub.Record, plus descriptions of 
+      the attributes of each record and the relationships between them, plus 
+      any relevant computed properties (for example, ``fullName``).
+    * The views. These are instantiations of hub.RecordArray and friends for 
+      particular queries. In principle, it is also possible for apps to 
+      generate their own queries and record arrays, but this is not recommended 
+      for performance reasons (to be explained later).
+    * The API. This is the API (beyond KVC) that apps will use to update the 
+      model layer. You'll provide APIs to support larger operations that span 
+      multiple records or classes of records in a single call. You'll also 
+      provide APIs to create new hubs, users, devices, etc. that work properly 
+      with the larger server environment the data model is a part of.
+
+Together, these three parts constitute the *public API* for your data model. If 
+you were to write documentation for your API, this is what you would document.
+
+The namespace
+-------------
+
+Each application should have a single, global object that acts as the namespace 
+of their application. To take advantage of KVC and KVO, it's helpful to make 
+this object an instance of ``hub.Object``::
+
+    // establish a namespace for our data model
+    var TaskList = hub.Object.create({
+        VERSION: '0.1'
+    });
+
+As you can see, the ``.create()`` class method takes a single JavaScript hash 
+as the properties of the new object. In hub.js, you generally do not need to 
+write an ``init()`` method like most other libraries.
+
+This style of coding, where the object is constructed directly, in-place, 
+instead of indirectly using template methods like ``init()`` is used throughout 
+the hub.js API. We find that programs written in this style are shorter, easier 
+to write, and easier to understand.
+
+.. admonition:: Using closures
+
+    If you wrap your data model in a closure, you'll need to do a little bit of 
+    extra work so that hub.js can find your record classes at runtime. This is 
+    also true if you package your data model with `CommonJS`__.
+
+__ http://commonjs.org
+
+The schema
+----------
+
+``hub.Record`` is the primary superclass for persistent objects. You'll 
+subclass ``hub.Record`` for each record class in your data model.
+
+To create a subclass, you'll use the ``.extend()`` class method, which has an 
+API very similar to ``.create()``::
+
+    TaskList.Task = hub.Record.extend({
+        isDone: hub.attr(Boolean, { default: false }),
+        description: hub.attr(String, { default: "" })
+    });
+
+For now, we'll ignore any relationships and just define the attributes of the 
+``Task`` record type.
+
+The ``hub.attr()`` function is a helper method that constructs an instance of 
+the ``hub.RecordAttribue`` class. ``hub.RecordAttribute`` is recognized as a 
+computed property by the hub.js KVC implementation.
+
+Record attributes are used to transform the underlying ``attributes`` hash of 
+the record into the type of object expected by the rest of the data model. For 
+instance, you could have a string in the ``attributes`` hash with the value 
+``"12 56 123"`` representing the RGB values of a color. If you were to register 
+an attribute transformer with hub.js, you could transform that string into a 
+JavaScript ``Color`` object when ``.get()`` is called. Similarly, you would 
+serialize the ``Color`` object back into a string when the record needed to be 
+saved.
+
+Assuming a record attribute transformed for the ``Color`` exists, here's how 
+you would use it::
+
+    TaskList.Task = hub.Record.extend({
+        isDone: hub.attr(Boolean, { default: false }),
+        description: hub.attr(String, { default: "" }),
+        color: hub.attr(Color, { default: new Color(127, 127, 127) })
+    });
+
+As you can see, custom attribute transformers are first class citizens in 
+hub.js.
+
+Created by
+----------
+
+In our schema, we'd like to know who created a specific ``Task``. In hub.js, 
+users are represented as instances of the ``hub.User`` class (or a subclass), 
+and there is an API call to get the ``hub.User`` that created a particular 
+record, so we'll create a computed property that calls that::
+
+    TaskList.Task = hub.Record.extend({
+        isDone: hub.attr(Boolean, { default: false }),
+        description: hub.attr(String, { default: "" }),
+        
+        createdBy: function(key, val) {
+            if (val) hub.debug("You can't change the creator of an object.");
+            return hub.author(this);
+        }.property().cacheable()
+    });
+
+Since this is a pretty standard thing to do, hub.js provides a pre-made 
+attribute you can use that does the same thing::
+
+    TaskList.Task = hub.Record.extend({
+        isDone: hub.attr(Boolean, { default: false }),
+        description: hub.attr(String, { default: "" }),
+        
+        createdBy: hub.AuthorAttribute
+    });
+
+And here's the definition of ``hub.AuthorAttribute``::
+
+    hub.AuthorAttribute = function(key, val) {
+        if (val) hub.debug("You can't change the author of a record.") ;
+        return hub.author(this) ;
+    }.property().cacheable();
+
+.. admonition:: Don't add the ()'s
+
+    You want to re-use the ``hub.AuthorAttribute`` function, not call it, so 
+    don't add the parenthesis!
+
+Similar function exists for ``hub.Device`` and other attributes that are part 
+of the Hub data structure itself.
+
+Relationships
+-------------
+
+We'd like to have more than one task list in our app, so our first instinct 
+would be to create a ``TaskList.TalkList`` class with a 
+``.toMany('TalkList.Task')`` relationship. As it turns out, this design isn't 
+very flexible.
+
+To see why, we need to think a little bit about *sharing*. One goal of our data 
+model is to be able to create and update shared task lists. Although in 
+principle we could place unshared and shared task lists in the same hub, this 
+would complicate our sharing efforts considerably.
+
+First, placing shared and unshared tasks in the same hub means that we'll be 
+sharing *all* of our tasks, not just the shared ones, since they'll all be in 
+the same hub. This is probably not what we want.
+
+A better architecture is to use *one hub per task list*.
+
+If you come from the RDBMS world, this will seem odd, but to a typical desktop 
+application developer, this approach makes total sense. In general, it's better 
+to think of a hub as if it were a file, not a database. Just like it doesn't 
+make sense to share *part of* a file, it doesn't make sense to share *part of* 
+a hub. It's an all or nothing thing.
+
+By storing all of the tasks is a single task list in one hub (and nothing 
+else), we can share and update each task list independently. Whenever we want a 
+new task list, we'll create a new hub just for that task list. Whenever we want 
+to share a task list, we'll share the hub for that task list.
+
+You will frequently have multiple hubs open in the same app, in the same way a 
+desktop application frequently has multiple documents open. How you display 
+these hubs to people is up to the app.
+
+Let's provide an API for creating a new task list. First we need to define 
+the hub itself::
+
+    TaskList.Hub = hub.Hub.extend({
+        uti: 'com.example.tasklist'
+    });
+
+.. admonition:: Unifrom type identifiers
+
+    The ``UTI``, or `Uniform Type Identifier`_, is a system developed by Apple for 
+    indicating the type of data something is. It's a continuation of the ubiquitous 
+    MIME type on the Internet, but more flexible. hub.js has pervasive support for 
+    UTIs.
+
+.. _Uniform Type Identifier: http://en.wikipedia.org/wiki/Uniform_Type_Identifier
+
+Now that we've got our ``hub.Hub`` subclass defined, we can provide API to 
+create new hubs::
+
+    TalkList.new = function() {
+        return TaskList.Hub.create();
+    };
+
+And in our app, we'll be creating new task lists like this::
+
+    >>> var tasklist = TaskList.new();
+    >>> tasklist.insert(Task, { description: "Finish the hub.js tutorial." });
+
+We'll deal with sharing task lists later. For now, let's move on to record 
+arrays, which is how we'll provide the list of tasks to our apps.
+
+Record Arrays
+-------------
+
 If this is your first time using Django, you'll have to take care of some
 initial setup. Namely, you'll need to auto-generate some code that establishes a
 Django :term:`project` -- a collection of settings for an instance of Django,
