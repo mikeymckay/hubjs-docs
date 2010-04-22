@@ -193,7 +193,7 @@ When you update an object using key-value coding, you can take advantage of
 hub.js' support for key-value observing (KVO).
 
 KVO means that changes made via KVC can be observed, without having to modify 
-the object or property you're tryng to observe. To observe an arbitrary 
+the object or property you're trying to observe. To observe an arbitrary 
 property on an object for changes, you'll use ``.observes()``::
 
     >>> var obj = hub.Object.create({
@@ -229,14 +229,14 @@ to determine which key changed::
     Only objects that include the ``hub.Observable`` mixin and call 
     ``this.initObservable()`` participate in key-value coding and key-value 
     observing. ``hub.Object`` does this for you automatically, but if you 
-    create objects that are not set up propertly, be aware that KVC and KVO 
+    create objects that are not set up properly, be aware that KVC and KVO 
     will not function as intended with those objects.
     
     If this is jibberish to you, just be aware that you need to use 
     ``hub.Object`` or the other classes in hub.js if you want to use KVC and 
     KVO. All of the code in this tutorial supports KVC and KVO.
 
-Changes you make with KVC are propogated to observers *before* ``.set()`` 
+Changes you make with KVC are propagated to observers *before* ``.set()`` 
 returns. This means that after a call to ``.set()``, you can be sure that all 
 observers have been notified of the change.
 
@@ -264,7 +264,7 @@ specifically, the "V" property specifies *what kinds of changes* to the state of
 your app are legal to make at various point on the "V".
 
 By respecting these *change points*, apps you build on top of a hub.js data 
-model will always propogate changes correctly, regardless of how those changes 
+model will always propagate changes correctly, regardless of how those changes 
 enter the app.
 
 Remember: in a hub.js model layer, many updates are the result of sync, which 
@@ -298,7 +298,7 @@ In the most general case, a mouse event enters the view layer, triggers an
 "action" in the controller layer, which calls an API in the model layer to 
 perform the action. These are the first three change points described above.
 
-When the action is performed, the controller layer is notifed by a property 
+When the action is performed, the controller layer is notified by a property 
 observer and a property update in the controller layer is made as a result. 
 This is the fourth change point.
 
@@ -359,7 +359,7 @@ view layer's job is to display data in the controller and model layer, whatever
 that data is.
 
 If the view adopts the "V" property, not only will the previous bug be fixed, 
-but any futher changes to the controller and model layers will also be handled 
+but any further changes to the controller and model layers will also be handled 
 correctly as well. Simply put, adopting the "V" property fixes the problem, not 
 the symptom.
 
@@ -375,7 +375,7 @@ foundational rule of data model design: always, *always*, **always** update the
 objects in your data model in an observable way.
 
 If you use KVC to make changes, this will happen automatically and everything 
-wil Just Work. But occassionaly, for performance or otherwise, you may want to 
+will Just Work. But occasionally, for performance or otherwise, you may want to 
 make changes for a brief period of time with KVO disabled. This is perfectly 
 okay, so long as any KVO notifications are made *before* the next change point 
 is reached. That way, an app that is written to respect the "V" property will 
@@ -571,7 +571,7 @@ the hub itself::
         uti: 'com.example.tasklist'
     });
 
-.. admonition:: Unifrom type identifiers
+.. admonition:: Uniform type identifiers
 
     The ``UTI``, or `Uniform Type Identifier`_, is a system developed by Apple for 
     indicating the type of data something is. It's a continuation of the ubiquitous 
@@ -670,14 +670,14 @@ A Hub contains three immutable object types. They are:
       they are typically JSON hashes (as strings) that represent the 
       ``attributes`` hash of a ``hub.Record`` object. Within hub.js, objects of 
       this type are represented with the ``hub.Data`` class.
-    * **Metedata** These objects are links between Data objects and 
+    * **Metadata** These objects are links between Data objects and 
       Commit objects (to be defined next). They specify what kind of data a 
       Data object contains. Within hub.js, objects of this type are represented 
       with the ``hub.Metadata`` class.
     * **Commit** These objects are pointed to by Hub objects (defined 
       next), and point to exactly one Data object and a sorted list of Commit 
-      objects that directly preceeded this Commit (there is more than one 
-      preceeding Commit object in the case of a *merge*). Within hub.js, 
+      objects that directly preceded this Commit (there is more than one 
+      preceding Commit object in the case of a *merge*). Within hub.js, 
       objects of this type are represented with the ``hub.Commit`` class.
 
 In addition, there are three mutable objects. They are:
