@@ -1,4 +1,9 @@
-This documentation needs to be compiled in order to use it.
+This repo holds the source required to build the hub.js documentation. 
+
+HubJS can be found here:
+http://github.com/hubjs/hubjs
+
+One day these docs will all be hub based, but for now we are using the django templates. To view the docs you will need to compile them. Here's how to do it:
 
 For Ubuntu:
 
