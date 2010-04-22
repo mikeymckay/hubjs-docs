@@ -1,0 +1,7 @@
+This documentation needs to be compiled in order to use it.
+
+For Ubuntu:
+
+sudo apt-get install python-sphinx
+make html
+firefox _build/html/index.html
